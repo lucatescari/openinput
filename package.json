@@ -1,6 +1,6 @@
 {
   "name": "openinput",
-  "version": "0.3.3-beta.1",
+  "version": "0.5.0-beta.2",
   "main": "dist-electron/electron/main.js",
   "description": "Open-source stream deck configuration software with a plugin architecture for any deck-style input device",
   "author": {
@@ -9,9 +9,9 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/lucatescari/OpenInput"
+    "url": "https://github.com/lucatescari/openinput"
   },
-  "homepage": "https://github.com/lucatescari/OpenInput",
+  "homepage": "https://github.com/lucatescari/openinput",
   "license": "MIT WITH Commons-Clause",
   "scripts": {
     "ng": "ng",
@@ -71,7 +71,7 @@
     "publish": {
       "provider": "github",
       "owner": "lucatescari",
-      "repo": "OpenInput"
+      "repo": "openinput"
     },
     "directories": {
       "output": "release"
@@ -99,14 +99,12 @@
     },
     "win": {
       "target": "nsis",
-      "icon": "build/icon.png",
+      "icon": "build/icon.ico",
       "artifactName": "OpenInput-${version}-win.${ext}"
     },
     "nsis": {
       "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "installerIcon": "build/icon.png",
-      "uninstallerIcon": "build/icon.png"
+      "allowToChangeInstallationDirectory": true
     },
     "linux": {
       "target": "AppImage",
