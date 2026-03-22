@@ -142,5 +142,5 @@ run(
 
 console.log(`\n  ✓ Released ${tag}`);
 console.log(
-  `  → https://github.com/lucatescari/OpenInput/releases/tag/${tag}\n`,
+  `  → https://github.com/lucatescari/openinput/releases/tag/${tag}\n`,
 );
