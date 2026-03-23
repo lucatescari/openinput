@@ -506,16 +506,6 @@ function getSystemVolume(): Promise<number> {
           resolve(isNaN(v) ? 50 : v);
         },
       );
-    } else if (process.platform === 'linux') {
-      exec(
-        `amixer get Master 2>/dev/null | grep -oP '\\d+%' | head -1`,
-        { timeout: 2000 },
-        (err, stdout) => {
-          if (err) return reject(err);
-          const v = parseInt(stdout.trim(), 10);
-          resolve(isNaN(v) ? 50 : v);
-        },
-      );
     } else if (process.platform === 'win32') {
       // PowerShell: read master volume via Audio endpoint
       // Uses the built-in Windows.Media.Audio namespace on Win10+

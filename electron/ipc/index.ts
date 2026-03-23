@@ -29,18 +29,13 @@ function registerAppHandlers(): void {
     async (): Promise<IpcResponse<string | null>> => {
       try {
         const isMac = process.platform === 'darwin';
-        const isWin = process.platform === 'win32';
-        const defaultPath = isMac
-          ? '/Applications'
-          : isWin
-            ? 'C:\\Program Files'
-            : '/usr/share/applications';
+        const defaultPath = isMac ? '/Applications' : 'C:\\Program Files';
         const result = await dialog.showOpenDialog({
           title: 'Select Application',
           defaultPath,
           filters: isMac
             ? []
-            : [{ name: 'Executables', extensions: isWin ? ['exe', 'lnk'] : ['desktop', 'sh', 'AppImage', '*'] }],
+            : [{ name: 'Executables', extensions: ['exe', 'lnk'] }],
           properties: ['openFile'],
         });
 

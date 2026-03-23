@@ -193,6 +193,12 @@ import { ColorPickerComponent } from '../../components/ui/color-picker.component
             >
               Import Profile
             </button>
+            <button
+              (click)="copyAllData()"
+              class="rounded-lg border border-gray-300 px-4 py-2 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-50 dark:border-neutral-700 dark:text-gray-400 dark:hover:bg-neutral-800"
+            >
+              Copy All Data
+            </button>
           </div>
           @if (exportStatus()) {
             <p class="mt-2 text-xs text-green-600 dark:text-green-400">{{ exportStatus() }}</p>
@@ -477,6 +483,18 @@ export class SettingsPage implements OnInit, OnDestroy {
   async importProfile(): Promise<void> {
     await this.profileState.importProfile();
     this.deckState.loadFromProfile();
+  }
+
+  async copyAllData(): Promise<void> {
+    try {
+      const json = await this.ipc.invoke<string>(IPC_CHANNELS.PROFILE_COPY_ALL);
+      await navigator.clipboard.writeText(json);
+      this.exportStatus.set('All data copied to clipboard');
+      setTimeout(() => this.exportStatus.set(''), 3000);
+    } catch {
+      this.exportStatus.set('Failed to copy data');
+      setTimeout(() => this.exportStatus.set(''), 3000);
+    }
   }
 
   async openGitHub(): Promise<void> {

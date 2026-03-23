@@ -320,9 +320,8 @@ interface InstallFeedback {
             <!-- Warning -->
             <div class="mt-4 rounded-lg bg-amber-50 px-4 py-3 dark:bg-amber-900/10">
               <p class="text-xs leading-relaxed text-amber-800 dark:text-amber-300">
-                Community plugins run code on your machine. This is the same trust model used by
-                VS Code extensions, Obsidian plugins, and npm packages. All plugins in this store
-                have been reviewed, but you should only install plugins you trust.
+                Community plugins run code on your machine. All plugins in this store
+                have been reviewed, but you install them at your own risk. Only install plugins you trust.
               </p>
             </div>
 
@@ -396,14 +395,10 @@ export class StorePage implements OnInit {
   private readonly installed = signal<InstalledPlugin[]>([]);
 
   readonly currentPlatformLabel =
-    navigator.platform.startsWith('Mac') ? 'macOS'
-    : navigator.platform.startsWith('Win') ? 'Windows'
-    : 'Linux';
+    navigator.platform.startsWith('Mac') ? 'macOS' : 'Windows';
 
   private readonly currentPlatform: string =
-    navigator.platform.startsWith('Mac') ? 'macos'
-    : navigator.platform.startsWith('Win') ? 'windows'
-    : 'linux';
+    navigator.platform.startsWith('Mac') ? 'macos' : 'windows';
 
   readonly tabs: { value: FilterTab; label: string }[] = [
     { value: 'all', label: 'All' },
@@ -540,7 +535,6 @@ export class StorePage implements OnInit {
     switch (platform) {
       case 'macos': return 'macOS';
       case 'windows': return 'Windows';
-      case 'linux': return 'Linux';
       default: return platform;
     }
   }

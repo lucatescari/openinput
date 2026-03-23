@@ -3,7 +3,14 @@ import { promises as fs } from 'fs';
 import * as path from 'path';
 import { pluginRegistry } from './plugin-registry';
 import { profileService } from '../services/profile.service';
-import type { CommunityPluginExport } from '../../shared/types/community-plugin.types';
+import type {
+  CommunityPluginExport,
+  PluginContext,
+} from '../../shared/types/community-plugin.types';
+import type { DeviceInputEvent } from '../../shared/types/device.types';
+import type { DeviceLayout } from '../../shared/types/device-plugin.types';
+
+// ── Loaded plugins ─────────────────────────────────────────────────
 
 /** All loaded community plugins, keyed by ID. */
 const loadedPlugins = new Map<string, CommunityPluginExport>();
@@ -12,6 +19,171 @@ const loadedPlugins = new Map<string, CommunityPluginExport>();
 function getPluginsDir(): string {
   return path.join(app.getPath('userData'), 'store', 'plugins');
 }
+
+// ── Event listener storage (per-plugin) ────────────────────────────
+
+type KeyCb = (keyIndex: number) => void;
+type EncoderCb = (index: number, direction: 'cw' | 'ccw') => void;
+type DeviceChangeCb = (connected: boolean) => void;
+
+const keyDownListeners = new Map<string, Set<KeyCb>>();
+const keyUpListeners = new Map<string, Set<KeyCb>>();
+const encoderRotateListeners = new Map<string, Set<EncoderCb>>();
+const deviceChangeListeners = new Map<string, Set<DeviceChangeCb>>();
+
+function getOrCreateSet<T>(map: Map<string, Set<T>>, key: string): Set<T> {
+  let set = map.get(key);
+  if (!set) {
+    set = new Set();
+    map.set(key, set);
+  }
+  return set;
+}
+
+// ── Lazy imports (avoid circular deps with hid.service) ────────────
+
+function getHidService() {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  return require('../services/hid.service').hidService;
+}
+
+function getProcessImage() {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  return require('../services/image.service').processImage;
+}
+
+// ── Context factory ────────────────────────────────────────────────
+
+function createPluginContext(pluginId: string): PluginContext {
+  return {
+    pluginId,
+
+    async setKeyImage(keyIndex: number, pngBuffer: Buffer): Promise<void> {
+      try {
+        const hid = getHidService();
+        if (!hid.isConnected()) return;
+
+        const layout: DeviceLayout | null = hid.getActiveLayout();
+        const protocol = hid.getActiveProtocol();
+        if (!layout?.keys || !protocol) return;
+
+        const outputId = protocol.getOutputId('key', keyIndex);
+        if (outputId === undefined) return;
+
+        const processImage = getProcessImage();
+        const { device } = await processImage(pngBuffer, layout.keys.imageSpec);
+        await hid.sendImage(outputId, device);
+      } catch (err) {
+        console.error(`[plugin-context:${pluginId}] setKeyImage failed:`, err);
+      }
+    },
+
+    getLayout(): DeviceLayout | null {
+      try {
+        return getHidService().getActiveLayout();
+      } catch {
+        return null;
+      }
+    },
+
+    isConnected(): boolean {
+      try {
+        return getHidService().isConnected();
+      } catch {
+        return false;
+      }
+    },
+
+    onKeyDown(cb: KeyCb): () => void {
+      const set = getOrCreateSet(keyDownListeners, pluginId);
+      set.add(cb);
+      return () => { set.delete(cb); };
+    },
+
+    onKeyUp(cb: KeyCb): () => void {
+      const set = getOrCreateSet(keyUpListeners, pluginId);
+      set.add(cb);
+      return () => { set.delete(cb); };
+    },
+
+    onEncoderRotate(cb: EncoderCb): () => void {
+      const set = getOrCreateSet(encoderRotateListeners, pluginId);
+      set.add(cb);
+      return () => { set.delete(cb); };
+    },
+
+    onDeviceChange(cb: DeviceChangeCb): () => void {
+      const set = getOrCreateSet(deviceChangeListeners, pluginId);
+      set.add(cb);
+      return () => { set.delete(cb); };
+    },
+  };
+}
+
+// ── Event dispatch (called by HID service) ─────────────────────────
+
+/**
+ * Forward a device input event to all plugin listeners.
+ * Called by the HID service on every key/encoder/touch event.
+ */
+export function dispatchPluginKeyEvent(event: DeviceInputEvent): void {
+  try {
+    switch (event.type) {
+      case 'key_down':
+        for (const set of keyDownListeners.values()) {
+          for (const cb of set) {
+            try { cb(event.index); } catch { /* plugin error — ignore */ }
+          }
+        }
+        break;
+      case 'key_up':
+        for (const set of keyUpListeners.values()) {
+          for (const cb of set) {
+            try { cb(event.index); } catch { /* plugin error — ignore */ }
+          }
+        }
+        break;
+      case 'encoder_cw':
+        for (const set of encoderRotateListeners.values()) {
+          for (const cb of set) {
+            try { cb(event.index, 'cw'); } catch { /* plugin error — ignore */ }
+          }
+        }
+        break;
+      case 'encoder_ccw':
+        for (const set of encoderRotateListeners.values()) {
+          for (const cb of set) {
+            try { cb(event.index, 'ccw'); } catch { /* plugin error — ignore */ }
+          }
+        }
+        break;
+    }
+  } catch {
+    // Never let plugin errors crash the event loop
+  }
+}
+
+/**
+ * Notify all plugins of a device connect/disconnect.
+ * Called by the HID service.
+ */
+export function dispatchPluginDeviceChange(connected: boolean): void {
+  for (const set of deviceChangeListeners.values()) {
+    for (const cb of set) {
+      try { cb(connected); } catch { /* plugin error — ignore */ }
+    }
+  }
+}
+
+/** Clear all event listeners for a plugin. */
+function clearPluginListeners(pluginId: string): void {
+  keyDownListeners.delete(pluginId);
+  keyUpListeners.delete(pluginId);
+  encoderRotateListeners.delete(pluginId);
+  deviceChangeListeners.delete(pluginId);
+}
+
+// ── Plugin loading ─────────────────────────────────────────────────
 
 /**
  * Scan the installed plugins directory and load any community plugins.
@@ -50,9 +222,10 @@ export async function loadInstalledPlugins(): Promise<void> {
         continue;
       }
 
-      // Initialize if the plugin has a startup hook
+      // Initialize with context
       if (plugin.initialize) {
-        await plugin.initialize();
+        const context = createPluginContext(plugin.id);
+        await plugin.initialize(context);
       }
 
       // If the plugin provides a device driver, register it
@@ -98,9 +271,10 @@ export async function loadSinglePlugin(pluginId: string): Promise<number> {
     throw new Error(`Plugin "${pluginId}" is missing id or name`);
   }
 
-  // Initialize
+  // Initialize with context
   if (plugin.initialize) {
-    await plugin.initialize();
+    const context = createPluginContext(plugin.id);
+    await plugin.initialize(context);
   }
 
   // Device plugins cannot be hot-loaded — they need app restart
@@ -155,6 +329,7 @@ export function unloadPlugin(pluginId: string): void {
       console.error(`[plugin-loader] Error disposing plugin "${pluginId}":`, err);
     }
     loadedPlugins.delete(pluginId);
+    clearPluginListeners(pluginId);
     console.log(`[plugin-loader] Unloaded plugin: ${pluginId}`);
   }
 
@@ -195,4 +370,8 @@ export function disposeAllPlugins(): void {
     }
   }
   loadedPlugins.clear();
+  keyDownListeners.clear();
+  keyUpListeners.clear();
+  encoderRotateListeners.clear();
+  deviceChangeListeners.clear();
 }

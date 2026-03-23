@@ -95,7 +95,7 @@ function createWindow(): BrowserWindow {
           trafficLightPosition: { x: 16, y: 16 },
         }
       : {
-          // Windows/Linux: use the default frame with auto-hide menu bar
+          // Windows: use the default frame with auto-hide menu bar
           autoHideMenuBar: true,
         }),
   });

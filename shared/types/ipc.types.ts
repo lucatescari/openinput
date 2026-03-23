@@ -50,6 +50,7 @@ export const IPC_CHANNELS = {
   // Profile import/export
   PROFILE_EXPORT: 'openinput:profile:export',
   PROFILE_IMPORT: 'openinput:profile:import',
+  PROFILE_COPY_ALL: 'openinput:profile:copy-all',
 
   // Screensaver
   SCREENSAVER_SET: 'openinput:screensaver:set',

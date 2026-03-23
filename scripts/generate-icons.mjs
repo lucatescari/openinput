@@ -6,9 +6,9 @@
  * The top-left square is "selected" (highlighted in brand purple).
  *
  * Outputs:
- *   build/icon.png      — 1024×1024 master (used by electron-builder for win/linux)
- *   build/icon.icns      — macOS icon (generated via sips)
- *   build/icons/         — Linux icon sizes (16–512)
+ *   build/icon.png      — 1024×1024 master (used by electron-builder)
+ *   build/icon.icns      — macOS icon (generated via iconutil)
+ *   build/icon.ico       — Windows icon (generated from sized PNGs)
  *   src/favicon.png      — 256×256 web favicon
  */
 
@@ -106,9 +106,9 @@ async function main() {
   writeFileSync(join(ROOT, 'build', 'icon.png'), masterPng);
   console.log('  build/icon.png (1024×1024)');
 
-  // 2. Linux icon sizes
-  const linuxSizes = [16, 32, 48, 64, 128, 256, 512];
-  for (const s of linuxSizes) {
+  // 2. Sized PNGs (used for .ico generation)
+  const sizes = [16, 32, 48, 64, 128, 256];
+  for (const s of sizes) {
     const svg = buildIconSvg(s);
     const buf = await sharp(Buffer.from(svg)).resize(s, s).png().toBuffer();
     writeFileSync(join(ROOT, 'build', 'icons', `${s}x${s}.png`), buf);

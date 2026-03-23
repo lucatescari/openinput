@@ -55,7 +55,7 @@ export async function executeAction(action: ActionConfig): Promise<void> {
   }
 }
 
-/** Simulate a keyboard shortcut via osascript (macOS) or xdotool (Linux) */
+/** Simulate a keyboard shortcut via osascript (macOS) or PowerShell (Windows) */
 async function executeHotkey(action: ActionConfig): Promise<void> {
   if (!action.hotkey) return;
 
@@ -127,31 +127,6 @@ async function executeHotkey(action: ActionConfig): Promise<void> {
     }
 
     await runCommand(`osascript -e '${script}'`);
-  } else if (process.platform === 'linux') {
-    // xdotool approach
-    const parts: string[] = [];
-    for (const mod of modifiers) {
-      switch (mod.toLowerCase()) {
-        case 'command':
-        case 'cmd':
-        case 'meta':
-          parts.push('super');
-          break;
-        case 'control':
-        case 'ctrl':
-          parts.push('ctrl');
-          break;
-        case 'alt':
-        case 'option':
-          parts.push('alt');
-          break;
-        case 'shift':
-          parts.push('shift');
-          break;
-      }
-    }
-    parts.push(key);
-    await runCommand(`xdotool key ${parts.join('+')}`);
   } else if (process.platform === 'win32') {
     // PowerShell SendKeys approach
     const psModMap: Record<string, string> = {
@@ -249,8 +224,6 @@ async function executeCloseApp(action: ActionConfig): Promise<void> {
     await runCommand(
       `osascript -e 'tell application "${appName.replace(/'/g, "'\\''")}" to quit'`,
     );
-  } else if (process.platform === 'linux') {
-    await runCommand(`pkill -f "${appName}"`);
   } else if (process.platform === 'win32') {
     await runCommand(`taskkill /IM "${appName}.exe" /F`);
   }
@@ -268,10 +241,6 @@ async function executeText(action: ActionConfig): Promise<void> {
     await runCommand(
       `osascript -e 'tell application "System Events" to keystroke "${escaped}"'`,
     );
-  } else if (process.platform === 'linux') {
-    // xdotool type with delay for reliability
-    const escaped = action.text.replace(/'/g, "'\\''");
-    await runCommand(`xdotool type --delay 12 '${escaped}'`);
   } else if (process.platform === 'win32') {
     // PowerShell SendKeys — escape special chars
     const psEscaped = action.text
@@ -339,22 +308,7 @@ async function executeMedia(action: ActionConfig): Promise<void> {
         `'`;
       await runCommand(jxa(keyCode));
     }
-  } else if (process.platform === 'linux') {
-    const xdotoolKeys: Record<string, string> = {
-      play_pause: 'XF86AudioPlay',
-      next_track: 'XF86AudioNext',
-      prev_track: 'XF86AudioPrev',
-      volume_up: 'XF86AudioRaiseVolume',
-      volume_down: 'XF86AudioLowerVolume',
-      mute: 'XF86AudioMute',
-    };
-    const xKey = xdotoolKeys[action.mediaAction];
-    if (xKey) {
-      await runCommand(`xdotool key ${xKey}`);
-    }
   } else if (process.platform === 'win32') {
-    // Use PowerShell with .NET SendKeys for media keys and
-    // AudioDeviceCmdlets/core audio COM for volume
     const mediaKeyMap: Record<string, string> = {
       play_pause: '0xB3',  // VK_MEDIA_PLAY_PAUSE
       next_track: '0xB0',  // VK_MEDIA_NEXT_TRACK
@@ -397,13 +351,6 @@ async function executeSystem(action: ActionConfig): Promise<void> {
       await runCommand(
         `powershell -Command "$b=(Get-CimInstance -Namespace root/WMI -ClassName WmiMonitorBrightness).CurrentBrightness; $n=[Math]::Max(0,$b-10); (Get-CimInstance -Namespace root/WMI -ClassName WmiMonitorBrightnessMethods).WmiSetBrightness(1,$n)"`,
       );
-    }
-  } else if (process.platform === 'linux') {
-    // Linux: use xdotool to send brightness keys
-    if (action.systemAction === 'brightness_up') {
-      await runCommand('xdotool key XF86MonBrightnessUp');
-    } else if (action.systemAction === 'brightness_down') {
-      await runCommand('xdotool key XF86MonBrightnessDown');
     }
   }
 }

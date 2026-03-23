@@ -109,6 +109,22 @@ export function registerProfileIpcHandlers(): void {
     },
   );
 
+  /** Copy all profiles as JSON to clipboard */
+  ipcMain.handle(
+    IPC_CHANNELS.PROFILE_COPY_ALL,
+    (): IpcResponse<string> => {
+      try {
+        const summaries = profileService.listProfiles();
+        const allProfiles = summaries
+          .map((s) => profileService.getProfile(s.id))
+          .filter(Boolean);
+        return { success: true, data: JSON.stringify(allProfiles, null, 2) };
+      } catch (err) {
+        return { success: false, error: (err as Error).message };
+      }
+    },
+  );
+
   /** Import a profile from a .json / .openinput file via Open dialog */
   ipcMain.handle(
     IPC_CHANNELS.PROFILE_IMPORT,

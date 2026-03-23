@@ -126,6 +126,12 @@ class HidService {
     this.startHeartbeat();
     this.resetIdleTimer();
 
+    // Notify plugins of connect
+    try {
+      const { dispatchPluginDeviceChange } = require('../plugins/plugin-loader');
+      dispatchPluginDeviceChange(true);
+    } catch { /* plugin-loader not ready — ignore */ }
+
     return this.deviceInfo;
   }
 
@@ -494,6 +500,12 @@ class HidService {
   }
 
   private dispatchAction(event: DeviceInputEvent): void {
+    // Forward all events to community plugin listeners
+    try {
+      const { dispatchPluginKeyEvent } = require('../plugins/plugin-loader');
+      dispatchPluginKeyEvent(event);
+    } catch { /* plugin-loader not ready yet — ignore */ }
+
     const profile = profileService.getActiveProfile();
     if (!profile) return;
 
@@ -599,6 +611,11 @@ class HidService {
         connected: false,
       });
     }
+    // Notify plugins of disconnect
+    try {
+      const { dispatchPluginDeviceChange } = require('../plugins/plugin-loader');
+      dispatchPluginDeviceChange(false);
+    } catch { /* plugin-loader not ready — ignore */ }
   }
 }
 

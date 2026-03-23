@@ -2,7 +2,7 @@
 export type StorePluginType = 'device' | 'action' | 'profile';
 
 /** Supported platforms. */
-export type PluginPlatform = 'macos' | 'windows' | 'linux';
+export type PluginPlatform = 'macos' | 'windows';
 
 /**
  * Permissions a plugin may request.
