@@ -34,6 +34,12 @@ export interface PluginContext {
 
   /** Register a callback for device connect/disconnect events. Returns unsubscribe fn. */
   onDeviceChange(cb: (connected: boolean) => void): () => void;
+
+  /**
+   * Render an SVG string to a PNG buffer at the specified dimensions.
+   * Convenience wrapper so plugins don't need their own sharp dependency.
+   */
+  renderSvg(svg: string, width: number, height: number): Promise<Buffer>;
 }
 
 // ── Plugin Export ──────────────────────────────────────────────────

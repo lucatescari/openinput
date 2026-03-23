@@ -8,10 +8,13 @@ import type {
 } from '../../shared/types/store.types';
 
 // ── Configuration ───────────────────────────────────────────────────────
-const REGISTRY_URL =
-  'https://raw.githubusercontent.com/lucatescari/openinput-plugins/main/registry.json';
 const REGISTRY_BASE =
   'https://raw.githubusercontent.com/lucatescari/openinput-plugins/main/';
+
+/** Append a cache-buster so GitHub's CDN serves fresh content. */
+function registryUrl(): string {
+  return `${REGISTRY_BASE}registry.json?_=${Date.now()}`;
+}
 
 /** How long before the cached registry is considered stale (5 minutes). */
 const CACHE_TTL_MS = 5 * 60 * 1000;
@@ -54,7 +57,7 @@ class StoreService {
     }
 
     try {
-      const res = await fetch(REGISTRY_URL);
+      const res = await fetch(registryUrl());
       if (!res.ok) {
         throw new Error(`HTTP ${res.status}: ${res.statusText}`);
       }
@@ -104,7 +107,8 @@ class StoreService {
       ? plugin.downloadUrl
       : REGISTRY_BASE + plugin.downloadUrl;
 
-    const res = await fetch(bundleUrl);
+    // Cache-bust to ensure we always get the latest version
+    const res = await fetch(`${bundleUrl}?_=${Date.now()}`);
     if (!res.ok) {
       throw new Error(`Failed to download plugin: HTTP ${res.status}`);
     }

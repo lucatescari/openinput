@@ -117,6 +117,11 @@ function createPluginContext(pluginId: string): PluginContext {
       set.add(cb);
       return () => { set.delete(cb); };
     },
+
+    async renderSvg(svg: string, width: number, height: number): Promise<Buffer> {
+      const sharp = require('sharp');
+      return sharp(Buffer.from(svg)).resize(width, height).png().toBuffer();
+    },
   };
 }
 
